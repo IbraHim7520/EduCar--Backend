@@ -143,6 +143,7 @@ async function run() {
       res.send(ClassInfo);
   })
 
+  //not checked apies----------------------
   app.put('/make-admin/:id', async(req , res)=>{
     const id = req.params.id;
     const qry = {_id: new ObjectId(id)}
@@ -155,6 +156,18 @@ async function run() {
     const result = await UserRole.updateOne(qry , updateDoc);
     res.send(result)
     
+  })
+
+  app.put("/reject-cls/:id", async(req , res)=>{
+        const id = req.params.id;
+    const qry = {_id: new ObjectId(id)}
+    const updateDoc = {
+      $set:{
+        Status: "Rejected",
+      }
+    }
+    const result = await Lectures.updateOne(qry , updateDoc);
+    res.send(result)
   })
 
   }finally{
