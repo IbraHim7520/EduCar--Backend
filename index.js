@@ -143,6 +143,20 @@ async function run() {
       res.send(ClassInfo);
   })
 
+  app.put('/make-admin/:id', async(req , res)=>{
+    const id = req.params.id;
+    const qry = {_id: new ObjectId(id)}
+    const updateDoc = {
+      $set:{
+        Role: "Admin",
+        isAdmin: true
+      }
+    }
+    const result = await UserRole.updateOne(qry , updateDoc);
+    res.send(result)
+    
+  })
+
   }finally{
 
   }
