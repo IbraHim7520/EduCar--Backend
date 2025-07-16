@@ -28,18 +28,12 @@ async function run() {
     const TeacherReq_Collection = database.collection("TeacherReq_Collection")
     const UserRole = database.collection("User_Role");
     const Lectures = database.collection("Lectures");
-    app.post("/to-be-teacher-request", async(req , res)=>{
-      const Request = req.body;
-      const insertResponse = await TeacherReq_Collection.insertOne(Request);
-      res.send(insertResponse);
-    })
 
     app.get('/get-teacher-request', async (req, res)=>{
      const data = await TeacherReq_Collection.find().toArray()
-     res.send(data);
-        
-      
+     res.send(data);      
     })
+  
     app.post('/userrole', async(req , res)=>{
       const roleData = req.body.RoleData;
       const userEmail = roleData.Email
@@ -71,15 +65,29 @@ async function run() {
     })
 
     app.put('/update-role/:id', async(req, res)=>{
-        const id = req.params.id;
-        const query = {_id: new ObjectId(id)}
-        const updtaeDoc = {
-          $set:{
-            status : "Approved"
-          }
+      const reqID = req.params.id;
+      const ReqInfo = await TeacherReq_Collection.findOne({_id: new ObjectId(reqID)})
+      if(!ReqInfo){
+        return
+      }
+      const TeacherReqUpdate = {
+        $set:{
+          Status: "Approved"
         }
-        const result = await TeacherReq_Collection.updateOne(query , updtaeDoc);
-        res.send(result)
+      }
+      const UpdatedReq = await TeacherReq_Collection.updateOne({_id: new ObjectId(reqID)}, TeacherReqUpdate);
+      if(!UpdatedReq){
+        return
+      }
+      const reqTeacherEmail = ReqInfo.TeacherMail;
+      const roleUpdateQuery = {Email: reqTeacherEmail}
+      const updatedRole = {
+        $set:{
+          Role: "Teacher"
+        }
+      }
+      const updatedUserRole = await UserRole.updateOne(roleUpdateQuery, updatedRole)
+      res.send(updatedUserRole);
     })
 
     app.put("/reject-req/:id", async(req , res)=>{
@@ -94,11 +102,16 @@ async function run() {
         res.send(result)
     })
 
-    app.get('/get_one_req/:email', async(req , res)=>{
-      const email = req.params.email;
-      const query = {TeacherMail: email};
-      const result = await TeacherReq_Collection.findOne(query);
-      res.send(result);
+    app.post('/post-teachereq', async(req , res)=>{
+      const data  = req.body.data
+     const result = await TeacherReq_Collection.insertOne(data);
+     res.send(result);
+    })
+
+    app.get("/get-tecReq/:id", async(req , res)=>{
+      const id = req.params.id;
+      const result = await TeacherReq_Collection.findOne({_id: new ObjectId(id)})
+      res.send(result)
     })
 
     app.post('/insert-class', async(req, res)=>{
