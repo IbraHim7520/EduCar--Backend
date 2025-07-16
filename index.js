@@ -95,7 +95,7 @@ async function run() {
         const query = {_id: new ObjectId(id)}
         const updtaeDoc = {
           $set:{
-            status : "Rejected"
+            Status : "Rejected"
           }
         }
         const result = await TeacherReq_Collection.updateOne(query , updtaeDoc);
@@ -166,28 +166,46 @@ async function run() {
   //not checked apies----------------------
   app.put('/make-admin/:id', async(req , res)=>{
     const id = req.params.id;
-    const qry = {_id: new ObjectId(id)}
-    const updateDoc = {
+    const updatetoAdminRole = {
       $set:{
         Role: "Admin",
-        isAdmin: true
+        isAdmin : true
       }
     }
-    const result = await UserRole.updateOne(qry , updateDoc);
-    res.send(result)
+
+    const db_response = await UserRole.updateOne(
+      {_id: new ObjectId(id)},
+      updatetoAdminRole
+    )
+    if(db_response){
+      res.send(db_response);
+    }
     
   })
 
-  app.put("/reject-cls/:id", async(req , res)=>{
+  app.delete("/reject-cls/:id", async(req , res)=>{
         const id = req.params.id;
-    const qry = {_id: new ObjectId(id)}
-    const updateDoc = {
+      const ClassQry = {_id: new ObjectId(id)}
+      const updateClassStats = {
+        $set:{
+          Status: "Rejected"
+        }
+      }
+      const db_res = await Lectures.updateOne(ClassQry , updateClassStats);
+      res.send(db_res)
+ 
+  })
+
+  app.put("/aprove-cls/:id" , async(req , res)=>{
+    const classID = req.params.id;
+    const clasQry = {_id: new ObjectId(classID)}
+    const updateClassStats = {
       $set:{
-        Status: "Rejected",
+        Status: "Approved"
       }
     }
-    const result = await Lectures.updateOne(qry , updateDoc);
-    res.send(result)
+    const response = await Lectures.updateOne(clasQry, updateClassStats);
+    res.send(response)
   })
 
   }finally{
