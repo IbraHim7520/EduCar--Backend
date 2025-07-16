@@ -42,6 +42,13 @@ async function run() {
     })
     app.post('/userrole', async(req , res)=>{
       const roleData = req.body.RoleData;
+      const userEmail = roleData.Email
+      const emailQuery = {Email: userEmail};
+      const result = await UserRole.findOne(emailQuery);
+      if(result){
+        res.send({message:"Email alredy registered"})
+        return
+      }
       const roleinsertResponse = await UserRole.insertOne(roleData)
       res.send(roleinsertResponse);
     } )
