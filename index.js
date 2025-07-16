@@ -208,6 +208,13 @@ async function run() {
     res.send(response)
   })
 
+  app.get('/my-class/:email', async(req , res)=>{
+    const teacherMail = req.params.email;
+    const classQry = {TeacherEmail: teacherMail};
+    const classes = await Lectures.find(classQry).toArray();
+    res.send(classes);
+  })
+
   }finally{
 
   }
