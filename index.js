@@ -215,6 +215,37 @@ async function run() {
     res.send(classes);
   })
 
+  app.delete("/delete-class/:id", async(req , res)=>{
+    const id = req.params.id
+    const deleteQry = {_id: new ObjectId(id)}
+    const delereConfirmation = await Lectures.deleteOne(deleteQry);
+    if(delereConfirmation){
+      res.send(delereConfirmation);
+    }
+  })
+
+  app.put('/update-class/:id', async(req , res)=>{
+    const id = req.params.id
+    const clsData = req.body.UpdatedData
+    const docQury = {_id: new ObjectId(id)};
+    const ClassTitle = clsData?.ClassTitle
+    const Description = clsData?.Description
+    const ClassPrice = clsData?.ClassPrice
+    const Image = clsData?.Image
+
+
+    const updaeDoc = {
+      $set:{
+        ClassTitle : ClassTitle,
+        Description :Description,
+        ClassPrice : ClassPrice,
+        Image:Image
+      }
+    }
+    const response = await Lectures.updateOne(docQury, updaeDoc);
+    res.send(response)
+  })
+
   }finally{
 
   }
