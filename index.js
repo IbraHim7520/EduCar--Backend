@@ -1,15 +1,17 @@
-const express = require('express')
-const app = express()
-app.use(express.json())
-const port = process.env.PORT || 3000
-require('dotenv').config()
-const cors = require('cors')
-app.use(cors())
+// server.js (entry point)
+require('dotenv').config(); // Load env first!
+const express = require('express');
+const cors = require('cors');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const app = express();
+const port = process.env.PORT || 3000;
+// Middlewares
+app.use(cors());
+app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("Hello")
-})
-
+  res.send("Server is running successfully.");
+});
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASS}@cluster0.9vvyx12.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
@@ -28,6 +30,7 @@ async function run() {
     const TeacherReq_Collection = database.collection("TeacherReq_Collection")
     const UserRole = database.collection("User_Role");
     const Lectures = database.collection("Lectures");
+    const TeachingEvaluation =  database.collection("Teaching_Evaluation");
 
     app.get('/get-teacher-request', async (req, res) => {
       const data = await TeacherReq_Collection.find().toArray()
@@ -250,7 +253,7 @@ async function run() {
     app.put('/add-assignment/:id', async(req , res)=>{
       const id = req.params.id;
       const assignmentData = req.body.formData
-   
+      assignmentData.PostingTime =  new Date();
       const qry = {_id: new ObjectId(id)};
       const updateAssignment = {
         $addToSet:{
@@ -260,6 +263,104 @@ async function run() {
       const result = await Lectures.updateOne(qry , updateAssignment);
       res.send(result);
     })
+
+    app.post('/create-payment-intent', async (req, res) => {
+      try {
+        const data = req.body.data;
+       // console.log(data);
+        const TotalPrice = data?.ClassPrice * 100;
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: TotalPrice,
+          currency: 'usd',
+          automatic_payment_methods: {
+            enabled: true,
+          },
+        });
+        res.send({ clientSecret: paymentIntent.client_secret })
+      } catch (err) {
+        res.status(500).send({ error: err.message });
+      }
+    })
+
+    app.put("/class-enrollment/:id", async(req , res)=>{
+      const classId = req.params.id;
+      const PaymentDetails = req.body.PaymentDetails;
+      const classQry = {
+        _id: new ObjectId(classId)
+      }
+      const updateDoc ={
+        $addToSet:{
+          EnrolledBy:PaymentDetails
+        }
+      }
+      const upatedResult = await Lectures.updateOne(classQry , updateDoc);
+      res.send(upatedResult);
+    })
+
+    app.get('/my-enrolled-class/:email', async(req , res)=>{
+      const enrollerEmail = req.params.email;
+      const findingQuery = {
+        EnrolledBy:{
+          $elemMatch: {
+            StudentEmail: enrollerEmail
+          }
+        }
+      }
+      const classes = await Lectures.find(findingQuery).toArray()
+      res.send(classes);
+    })
+
+    app.put("/post-assignment/:id" , async(req , res)=>{
+      const id = req.params.id
+      const studentEmail = req.body.email;
+      console.log(studentEmail)
+      const qry = {_id: new ObjectId(id)};
+      const docUpdate = {
+        $addToSet:{
+          PostedAsgnment:studentEmail
+        }
+      }
+      const response = await Lectures.updateOne(qry , docUpdate);
+      res.send(response);
+    })
+
+    app.post('/post-evaluation', async(req , res)=>{
+      const Evaluationdata = req.body.Evaluationdata;
+      const result = await TeachingEvaluation.insertOne(Evaluationdata);
+      res.send(result);
+    })
+
+app.get('/total-enrolled', async (req, res) => {
+  try {
+    const Lectures = client.db("Educar-DB").collection("Lectures");
+
+    const result = await Lectures.aggregate([
+      {
+        $project: {
+          enrolledCount: {
+            $cond: [{ $isArray: "$EnrolledBy" }, { $size: "$EnrolledBy" }, 0]
+          }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalEnrolled: { $sum: "$enrolledCount" }
+        }
+      }
+    ]).toArray(); 
+
+    res.send({ totalEnrolled: result[0]?.totalEnrolled || 0 }); // cleaner response
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ error: "Internal Server Error" });
+  }
+});
+
+  app.get('/getreviews', async(req , res)=>{
+    const allReviews = await TeachingEvaluation.find().toArray()
+    res.send(allReviews);
+  })
 
   } finally {
 
