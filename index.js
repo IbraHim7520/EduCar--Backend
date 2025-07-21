@@ -199,24 +199,15 @@ app.get('/get-role/:email', verifyJWT, async (req, res) => {
 
     //not checked apies----------------------
     app.put('/make-admin/:id', async (req, res) => {
-      const headers = req?.headers?.authorization.split(' ')[1]
-      console.log(headers)
       const id = req.params.id;
-      const updatetoAdminRole = {
-        $set: {
+      const roleQry = {_id: new ObjectId(id)}
+      const response = await UserRole.updateOne(roleQry , {
+        $set:{
           Role: "Admin",
           isAdmin: true
         }
-      }
-
-      const db_response = await UserRole.updateOne(
-        { _id: new ObjectId(id) },
-        updatetoAdminRole
-      )
-      if (db_response) {
-        res.send(db_response);
-      }
-
+      })
+      res.send(response);
     })
 
     app.delete("/reject-cls/:id", async (req, res) => {
@@ -408,6 +399,18 @@ app.get('/total-enrolled', async (req, res) => {
     const allReviews = await TeachingEvaluation.find().toArray()
     res.send(allReviews);
   })
+
+  app.get('/search-user/:query', async (req, res) => {
+  const query = req.params.query;
+  const users = await UserRole.find({
+    $or: [
+      { Name: { $regex: query, $options: 'i' } },
+      { Email: { $regex: query, $options: 'i' } }
+    ]
+  }).toArray();
+  res.send(users);
+});
+
 
   } finally {
 
