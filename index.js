@@ -175,7 +175,27 @@ app.get('/get-role/:email', verifyJWT, async (req, res) => {
         {
           $sort: { arrayLength: -1 }
         }
-      ]).limit(6).toArray();
+      ]).limit(8).toArray();
+      res.send(result);
+    })
+
+    app.get('/all-classes', async (req, res) => {
+      // const query = {Status: Approved }
+      const result = await Lectures.aggregate([
+        {
+          $addFields: {
+            arrayLength: { $size: "$EnrolledBy" }
+          }
+        },
+        {
+          $match: {
+            Status: "Approved"
+          }
+        },
+        {
+          $sort: { arrayLength: -1 }
+        }
+      ]).toArray();
       res.send(result);
     })
 
@@ -425,6 +445,9 @@ app.get('/total-enrolled', async (req, res) => {
   }).toArray();
   res.send(users);
 });
+
+
+// Example: GET /classes?page=1&limit=10
 
 
   } finally {
