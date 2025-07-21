@@ -47,6 +47,7 @@ async function run() {
     const UserRole = database.collection("User_Role");
     const Lectures = database.collection("Lectures");
     const TeachingEvaluation =  database.collection("Teaching_Evaluation");
+    
 
 
     app.post('/jwt', (req , res)=>{
@@ -284,7 +285,7 @@ app.get('/my-class/:email', verifyJWT, async (req, res) => {
     app.put('/add-assignment/:id', async(req , res)=>{
       const id = req.params.id;
       const assignmentData = req.body.formData
-      assignmentData.PostingTime =  new Date();
+      assignmentData.AssignmentId =  new Date();
       const qry = {_id: new ObjectId(id)};
       const updateAssignment = {
         $addToSet:{
@@ -294,6 +295,20 @@ app.get('/my-class/:email', verifyJWT, async (req, res) => {
       const result = await Lectures.updateOne(qry , updateAssignment);
       res.send(result);
     })
+
+    app.put('/submit-assignment/:id', async(req , res)=>{
+      const classID = req.params.id;
+      const AssignmentData = req.body.classObeject;
+      AssignmentData.SubmisionId = new Date();
+      const qry = {_id: new ObjectId(classID)};
+      const response = await Lectures.updateOne(qry , {
+        $addToSet:{
+          SubmittedAsgnment: AssignmentData
+        }
+      })
+      res.send(response);
+    })
+
 
     app.post('/create-payment-intent', async (req, res) => {
       try {
