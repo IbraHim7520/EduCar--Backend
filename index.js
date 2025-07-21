@@ -4,10 +4,26 @@ const express = require('express');
 const cors = require('cors');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const app = express();
+const jwt = require('jsonwebtoken')
 const port = process.env.PORT || 3000;
 // Middlewares
 app.use(cors());
 app.use(express.json());
+
+const verifyJWT = (req, res, next) => {
+  const authHeader = req?.headers?.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: "Unauthorized access!" });
+  }
+  const token = authHeader.split(' ')[1];
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "Forbidden access!" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
 
 app.get("/", (req, res) => {
   res.send("Server is running successfully.");
@@ -32,10 +48,19 @@ async function run() {
     const Lectures = database.collection("Lectures");
     const TeachingEvaluation =  database.collection("Teaching_Evaluation");
 
+
+    app.post('/jwt', (req , res)=>{
+      const email = {email: req.body.email}
+     const jwtToken =  jwt.sign(email , process.env.JWT_SECRET, {expiresIn: "30d"})
+    res.send({token: jwtToken})
+    })
+
     app.get('/get-teacher-request', async (req, res) => {
       const data = await TeacherReq_Collection.find().toArray()
       res.send(data);
-    })
+      } )
+      
+
 
     app.post('/userrole', async (req, res) => {
       const roleData = req.body.RoleData;
@@ -50,19 +75,22 @@ async function run() {
       res.send(roleinsertResponse);
     })
 
-    app.get('/get-role/:email', async (req, res) => {
-      const UserEmail = req.params.email
-      //console.log(UserEmail);
-      const roles = { Email: UserEmail };
-      const users = await UserRole.findOne(roles);
-      if (users) {
-        res.send(users)
-      } else {
-        res.status(500).send({ message: "Internal Server Error!" })
-      }
-    })
+app.get('/get-role/:email', verifyJWT, async (req, res) => {
+  const requestedEmail = req.params.email;
+  const tokenEmail = req.decoded.email;
+  if (requestedEmail !== tokenEmail) {
+    return res.status(403).send({ message: "Forbidden access!" });
+  }
+  const roles = { Email: requestedEmail };
+  const users = await UserRole.findOne(roles);
+  if (users) {
+    res.send(users);
+  } else {
+    res.status(500).send({ message: "Internal Server Error!" });
+  }
+});
 
-    app.get('/getroles', async (req, res) => {
+  app.get('/getroles', async (req, res) => {
       const AllUsers = await UserRole.find().toArray()
       res.send(AllUsers);
     })
@@ -127,6 +155,9 @@ async function run() {
       const AllClass = await Lectures.find().toArray()
       res.send(AllClass);
     })
+
+
+
     app.get('/top-classes', async (req, res) => {
       // const query = {Status: Approved }
       const result = await Lectures.aggregate([
@@ -168,6 +199,8 @@ async function run() {
 
     //not checked apies----------------------
     app.put('/make-admin/:id', async (req, res) => {
+      const headers = req?.headers?.authorization.split(' ')[1]
+      console.log(headers)
       const id = req.params.id;
       const updatetoAdminRole = {
         $set: {
@@ -211,12 +244,19 @@ async function run() {
       res.send(response)
     })
 
-    app.get('/my-class/:email', async (req, res) => {
-      const teacherMail = req.params.email;
-      const classQry = { TeacherEmail: teacherMail };
-      const classes = await Lectures.find(classQry).toArray();
-      res.send(classes);
-    })
+app.get('/my-class/:email', verifyJWT, async (req, res) => {
+  const requestedEmail = req.params.email;
+  const tokenEmail = req.decoded.email;
+
+  if (requestedEmail !== tokenEmail) {
+    return res.status(403).send({ message: "Forbidden access!" });
+  }
+
+  const classQry = { TeacherEmail: requestedEmail };
+  const classes = await Lectures.find(classQry).toArray();
+  res.send(classes);
+});
+
 
     app.delete("/delete-class/:id", async (req, res) => {
       const id = req.params.id
@@ -297,18 +337,25 @@ async function run() {
       res.send(upatedResult);
     })
 
-    app.get('/my-enrolled-class/:email', async(req , res)=>{
-      const enrollerEmail = req.params.email;
-      const findingQuery = {
-        EnrolledBy:{
-          $elemMatch: {
-            StudentEmail: enrollerEmail
-          }
-        }
+app.get('/my-enrolled-class/:email', verifyJWT, async(req , res)=>{
+  const requestedEmail = req.params.email;
+  const tokenEmail = req.decoded.email;
+
+  if (requestedEmail !== tokenEmail) {
+    return res.status(403).send({ message: "Forbidden access!" });
+  }
+
+  const findingQuery = {
+    EnrolledBy: {
+      $elemMatch: {
+        StudentEmail: requestedEmail
       }
-      const classes = await Lectures.find(findingQuery).toArray()
-      res.send(classes);
-    })
+    }
+  };
+  const classes = await Lectures.find(findingQuery).toArray()
+  res.send(classes);
+});
+
 
     app.put("/post-assignment/:id" , async(req , res)=>{
       const id = req.params.id
