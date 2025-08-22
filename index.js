@@ -446,7 +446,31 @@ app.get('/total-enrolled', async (req, res) => {
   res.send(users);
 });
 
+app.get('/lowtohigh', async(req , res)=>{
+  const qry = Lectures.find().sort( {ClassPrice: 1 }).toArray();
+  if(qry){
+    res.send(qry)
+  }else{
+    res.status(401).send({message: "No Data found!"})
+  }
+})
 
+app.get("/hightolow", async(req , res)=>{
+  const response = await Lectures.find().sort( {ClassPrice: -1 }).toArray();
+  if( res){
+    res.send(response)
+  }else{
+    res.status(401).send({message: "No Data Found"});
+  }
+})
+app.get("/fromlow", async(req , res)=>{
+  const response = await Lectures.find().sort({ClassPrice: 1}).toArray()
+  if(response){
+    res.send(response)
+  }else{
+    res.send([])
+  }
+})
 // Example: GET /classes?page=1&limit=10
 
 
